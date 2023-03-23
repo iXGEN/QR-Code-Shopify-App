@@ -1,18 +1,22 @@
+import React from "react";
 import { Page } from "@shopify/polaris";
-import { TitleBar } from "@shopify/app-bridge-react";
+import { ResourcePicker } from "@shopify/app-bridge-react";
 
-import { trophyImage } from "../assets";
-
-import { ProductsCard } from "../components";
-
-export default function HomePage() {
-  return (
-    <Page
-      title="Product selector"
-      primaryAction={{
-        content: "Select products",
-        onAction: () => console.log("clicked"),
-      }}
-    />
-  );
+class HomePage extends React.Component {
+  state = { open: false };
+  render() {
+    return (
+      <Page
+        title="Product selector"
+        primaryAction={{
+          content: "Select products",
+          onAction: () => this.setState({ open: true }),
+        }}
+      >
+        <ResourcePicker resourceType="Product" open={this.state.open} />
+      </Page>
+    );
+  }
 }
+
+export default HomePage;
