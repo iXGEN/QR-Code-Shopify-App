@@ -1,32 +1,58 @@
-import React from "react";
-import { Page } from "@shopify/polaris";
-import { ResourcePicker } from "@shopify/app-bridge-react";
+import { useNavigate, TitleBar, Loading } from "@shopify/app-bridge-react";
+import {
+  Card,
+  EmptyState,
+  Layout,
+  Page,
+  SkeletonBodyText,
+} from "@shopify/polaris";
 
-class HomePage extends React.Component {
-  state = { open: false };
-  render() {
-    return (
-      <Page
-        title="Product selector"
+export default function HomePage() {
+  const navigate = useNavigate();
+  const isLoading = true;
+  const isRefetching = false;
+  const QRCodes = [];
+
+  const loadingMarkup = isLoading ? (
+    <Card sectioned>
+      <Loading />
+      <SkeletonBodyText />
+    </Card>
+  ) : null;
+
+  const emptyStateMarkup =
+    !isLoading && !QRCodes?.length ? (
+      <Card sectioned>
+        <EmptyState
+          heading="Create unique QR codes for your product"
+          action={{
+            content: "Create a QR code",
+            onAction: () => navigate("/qrcodes/new"),
+          }}
+          image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+        >
+          <p>
+            Allow customers to scan codes and buy products using their phones
+          </p>
+        </EmptyState>
+      </Card>
+    ) : null;
+
+  return (
+    <Page>
+      <TitleBar
+        title="QR Codes"
         primaryAction={{
-          content: "Select products",
-          onAction: () => this.setState({ open: true }),
+          content: "Create QR code",
+          onAction: () => navigate("/qrcodes/new"),
         }}
-      >
-        <ResourcePicker
-          resourceType="Product"
-          open={this.state.open}
-          onCancel={() => this.setState({ open: false })}
-          onSelection={(resources) => this.handleSelection(resources)}
-        />
-      </Page>
-    );
-  }
-  handleSelection = (resources) => {
-    const idFromResources = resources.selection.map((product) => product.id);
-    this.setState({ open: false });
-    console.log(idFromResources);
-  };
+      />
+      <Layout>
+        <Layout.Section>
+          {loadingMarkup}
+          {emptyStateMarkup}
+        </Layout.Section>
+      </Layout>
+    </Page>
+  );
 }
-
-export default HomePage;
