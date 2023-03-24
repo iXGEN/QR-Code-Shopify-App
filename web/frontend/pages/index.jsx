@@ -9,7 +9,7 @@ import {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const isLoading = true;
+  const isLoading = false;
   const isRefetching = false;
   const QRCodes = [];
 
