@@ -87,5 +87,17 @@ export default QRCodeForm = ({ QRCode: InitialQRCode }) => {
     ? new URL(`/qrcodes/${QRCode.id}/image`, location.toString()).toString()
     : null;
 
+  const handleProductChange = useCallback(({ selection }) => {
+    setSelectedProduct({
+      title: selection[0].title,
+      images: selection[0].images,
+      handle: selection[0].handle,
+    });
+    productId.onChange(selection[0].id);
+    variantId.onChange(selection[0].variants[0].id);
+    handle.onChange(selection[0].handle);
+    setShowResourcePicker(false);
+  }, []);
+
   return <div>QR Codes</div>;
 };
