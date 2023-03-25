@@ -1,4 +1,3 @@
-import React from "react";
 import { useState, useCallback } from "react";
 import {
   Banner,
@@ -20,25 +19,21 @@ import {
   ContextualSaveBar,
   ResourcePicker,
   useAppBridge,
-  UseAppBridge,
-  useAuthenticatedFetch,
   useNavigate,
 } from "@shopify/app-bridge-react";
 import { ImageMajor, AlertMinor } from "@shopify/polaris-icons";
-import {
-  useForm,
-  useField,
-  noEmptyString,
-  notEmptyString,
-} from "@shopify/react-form";
+
+import { useAuthenticatedFetch, useAppQuery } from "../hooks";
+
+import { useForm, useField, notEmptyString } from "@shopify/react-form";
 
 const NO_DISCOUNT_OPTION = { label: "No discount", value: "" };
 
 const DISCOUNT_CODES = {};
 
-export default QRCodeForm = ({ QRCode: InitialQRCode }) => {
+export function QRCodeForm({ QRCode: InitialQRCode }) {
   const [QRCode, setQRCode] = useState(InitialQRCode);
-  const [shownResourcePicker, setShownResourcePicker] = useState(false);
+  const [showResourcePicker, setShowResourcePicker] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(QRCode?.product);
   const navigate = useNavigate();
   const appBridge = useAppBridge();
@@ -99,6 +94,11 @@ export default QRCodeForm = ({ QRCode: InitialQRCode }) => {
     setShowResourcePicker(false);
   }, []);
 
+  const handleDiscountChange = useCallback((id) => {
+    discountId.onChange(id);
+    discountCode.onChange(DISCOUNT_CODES[id] || "");
+  }, []);
+
   const toggleResourcePicker = useCallback(
     () => setShowResourcePicker(!showResourcePicker),
     [showResourcePicker]
@@ -115,15 +115,240 @@ export default QRCodeForm = ({ QRCode: InitialQRCode }) => {
       discountCode: discountCode.value || undefined,
       variantId: variantId.value,
     };
+
     const targetURL =
       deletedProduct || destination.value[0] === "product"
         ? productViewURL(data)
         : productCheckoutURL(data);
+
     window.open(targetURL, "_blank", "noreferrer,noopener");
   }, [QRCode, selectedProduct, destination, discountCode, handle, variantId]);
 
   const isLoadingDiscounts = true;
   const discountOptions = [NO_DISCOUNT_OPTION];
 
-  return <div>QR Codes</div>;
-};
+  const imageSrc = selectedProduct?.images?.edges?.[0]?.node?.url;
+  const originalImageSrc = selectedProduct?.images?.[0]?.originalSrc;
+  const altText =
+    selectedProduct?.images?.[0]?.altText || selectedProduct?.title;
+
+  return (
+    <Stack vertical>
+      {deletedProduct && (
+        <Banner
+          title="The product for this QR code no longer exists."
+          status="critical"
+        >
+          <p>
+            Scans will be directed to a 404 page, or you can choose another
+            product for this QR code.
+          </p>
+        </Banner>
+      )}
+      <Layout>
+        <Layout.Section>
+          <Form>
+            <ContextualSaveBar
+              saveAction={{
+                label: "Save",
+                onAction: submit,
+                loading: submitting,
+                disabled: submitting,
+              }}
+              discardAction={{
+                label: "Discard",
+                onAction: reset,
+                loading: submitting,
+                disabled: submitting,
+              }}
+              visible={dirty}
+              fullWidth
+            />
+            <FormLayout>
+              <Card sectioned title="Title">
+                <TextField
+                  {...title}
+                  label="Title"
+                  labelHidden
+                  helpText="Only store staff can see this title"
+                />
+              </Card>
+
+              <Card
+                title="Product"
+                actions={[
+                  {
+                    content: productId.value
+                      ? "Change product"
+                      : "Select product",
+                    onAction: toggleResourcePicker,
+                  },
+                ]}
+              >
+                <Card.Section>
+                  {showResourcePicker && (
+                    <ResourcePicker
+                      resourceType="Product"
+                      showVariants={false}
+                      selectMultiple={false}
+                      onCancel={toggleResourcePicker}
+                      onSelection={handleProductChange}
+                      open
+                    />
+                  )}
+                  {productId.value ? (
+                    <Stack alignment="center">
+                      {imageSrc || originalImageSrc ? (
+                        <Thumbnail
+                          source={imageSrc || originalImageSrc}
+                          alt={altText}
+                        />
+                      ) : (
+                        <Thumbnail
+                          source={ImageMajor}
+                          color="base"
+                          size="small"
+                        />
+                      )}
+                      <TextStyle variation="strong">
+                        {selectedProduct.title}
+                      </TextStyle>
+                    </Stack>
+                  ) : (
+                    <Stack vertical spacing="extraTight">
+                      <Button onClick={toggleResourcePicker}>
+                        Select product
+                      </Button>
+                      {productId.error && (
+                        <Stack spacing="tight">
+                          <Icon source={AlertMinor} color="critical" />
+                          <TextStyle variation="negative">
+                            {productId.error}
+                          </TextStyle>
+                        </Stack>
+                      )}
+                    </Stack>
+                  )}
+                </Card.Section>
+                <Card.Section title="Scan Destination">
+                  <ChoiceList
+                    title="Scan destination"
+                    titleHidden
+                    choices={[
+                      { label: "Link to product page", value: "product" },
+                      {
+                        label: "Link to checkout page with product in the cart",
+                        value: "checkout",
+                      },
+                    ]}
+                    selected={destination.value}
+                    onChange={destination.onChange}
+                  />
+                </Card.Section>
+              </Card>
+              <Card
+                sectioned
+                title="Discount"
+                actions={[
+                  {
+                    content: "Create discount",
+                    onAction: () =>
+                      navigate(
+                        {
+                          name: "Discount",
+                          resource: {
+                            create: true,
+                          },
+                        },
+                        { target: "new" }
+                      ),
+                  },
+                ]}
+              >
+                <Select
+                  label="discount code"
+                  options={discountOptions}
+                  onChange={handleDiscountChange}
+                  value={discountId.value}
+                  disabled={isLoadingDiscounts || discountsError}
+                  labelHidden
+                />
+              </Card>
+            </FormLayout>
+          </Form>
+        </Layout.Section>
+        <Layout.Section secondary>
+          <Card sectioned title="QR code">
+            {QRCode ? (
+              <EmptyState imageContained={true} image={QRCodeURL} />
+            ) : (
+              <EmptyState>
+                <p>Your QR code will appear here after you save.</p>
+              </EmptyState>
+            )}
+            <Stack vertical>
+              <Button
+                fullWidth
+                primary
+                download
+                url={QRCodeURL}
+                disabled={!QRCode || isDeleting}
+              >
+                Download
+              </Button>
+              <Button
+                fullWidth
+                onClick={goToDestination}
+                disabled={!selectedProduct}
+              >
+                Go to destination
+              </Button>
+            </Stack>
+          </Card>
+        </Layout.Section>
+        <Layout.Section>
+          {QRCode?.id && (
+            <Button
+              outline
+              destructive
+              onClick={deleteQRCode}
+              loading={isDeleting}
+            >
+              Delete QR code
+            </Button>
+          )}
+        </Layout.Section>
+      </Layout>
+    </Stack>
+  );
+}
+
+function productViewURL({ host, productHandle, discountCode }) {
+  const url = new URL(host);
+  const productPath = `/products/${productHandle}`;
+
+  if (discountCode) {
+    url.pathname = `/discount/${discountCode}`;
+    url.searchParams.append("redirect", productPath);
+  } else {
+    url.pathname = productPath;
+  }
+
+  return url.toString();
+}
+
+function productCheckoutURL({ host, variantId, quantity = 1, discountCode }) {
+  const url = new URL(host);
+  const id = variantId.replace(
+    /gid:\/\/shopify\/ProductVariant\/([0-9]+)/,
+    "$1"
+  );
+
+  url.pathname = `/cart/${id}:${quantity}`;
+
+  if (discountCode) {
+    url.searchParams.append("discount", discountCode);
+  }
+
+  return url.toString();
+}
