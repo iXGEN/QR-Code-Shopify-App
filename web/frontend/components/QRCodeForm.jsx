@@ -99,5 +99,31 @@ export default QRCodeForm = ({ QRCode: InitialQRCode }) => {
     setShowResourcePicker(false);
   }, []);
 
+  const toggleResourcePicker = useCallback(
+    () => setShowResourcePicker(!showResourcePicker),
+    [showResourcePicker]
+  );
+
+  const isDeleting = false;
+  const deleteQRCode = () => console.log("delete");
+
+  const goToDestination = useCallback(() => {
+    if (!selectedProduct) return;
+    const data = {
+      host: appBridge.hostOrigin,
+      productHandle: handle.value || selectedProduct.handle,
+      discountCode: discountCode.value || undefined,
+      variantId: variantId.value,
+    };
+    const targetURL =
+      deletedProduct || destination.value[0] === "product"
+        ? productViewURL(data)
+        : productCheckoutURL(data);
+    window.open(targetURL, "_blank", "noreferrer,noopener");
+  }, [QRCode, selectedProduct, destination, discountCode, handle, variantId]);
+
+  const isLoadingDiscounts = true;
+  const discountOptions = [NO_DISCOUNT_OPTION];
+
   return <div>QR Codes</div>;
 };
